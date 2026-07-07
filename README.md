@@ -31,22 +31,14 @@ $$\text{Latency} = 1 \text{ (Round 0)} + 26 \text{ (Rounds 1-13 } \times 2) + 2 
 | `key_in` | Input | 256 bit | Bus nạp khóa chính 256-bit. |
 | `key_ready`| Output| 1 bit | Báo hiệu quá trình mở rộng khóa đã xong, sẵn sàng làm việc. |
 | `start` | Input | 1 bit | Kích hoạt mã hóa/giải mã một khối dữ liệu mới. |
-| `mode` | Input | 1 bit | Lựa chọn chế độ: `1` = Mã hóa (Encrypt), `0` = Giải mã (Decrypt). |
-| `din` | Input | 128 bit | Bus dữ liệu đầu vào (Plaintext / Ciphertext). |
-| `dout` | Output| 128 bit | Bus dữ liệu đầu ra (Ciphertext / Plaintext). |
-| `ready` | Output| 1 bit | Báo hiệu IP Core đang rảnh (Idle), sẵn sàng nhận lệnh mới. |
-| `done` | Output| 1 bit | Báo hiệu dữ liệu đầu ra `dout` hợp lệ (tích cực trong 1 chu kỳ). |
-
----
-
-## 3. Thông Số Cấu Hình PnR (PnR Flow Parameters)
+| `mode` | Input | 1 bit | Lựa chọn chế độ: `1` = Mã hóa (Encrypt), `0` = Giải mã (Decrypt). |## 3. Thông Số Cấu Hình PnR (PnR Flow Parameters)
 
 Quy trình thiết kế vật lý PnR được cấu hình thông qua [config.json](file:///home/tienpnh/workspace/librelane/my_designs/aes256/config.json) với các thông số tối ưu hóa thời gian và không gian đi dây (timing & routing closure):
 
 * **Thư viện công nghệ (Technology PDK):** SkyWater 130nm (`sky130A`), thư viện cell chuẩn High-Density (`sky130_fd_sc_hd`).
 * **Chu kỳ Clock mục tiêu (Clock Period):** **`25.0 ns`** (Tương đương tần số hoạt động **40 MHz** trên Silicon thực tế).
-* **Mật độ sử dụng lõi mục tiêu (Core Utilization):** **`30%`** (Tỷ lệ phân bổ diện tích tối ưu, giúp tăng lượng kênh dẫn trống để router đi dây tín hiệu, triệt tiêu hoàn toàn nghẽn mạch routing congestion).
-* **Xử lý tín hiệu Clock:** Tự động tổng hợp Clock Tree Synthesis (CTS) để cấp phát xung nhịp đồng đều đến toàn bộ các Flip-Flops.
+* **Mật độ sử dụng lõi mục tiêu (Core Utilization):** **`40%`** (Tỷ lệ phân bổ diện tích tối ưu giúp đảm bảo độ thoáng cho kênh dẫn đi dây, khắc phục triệt để nghẽn mạch routing congestion).
+* **Xử lý tín hiệu Clock & Ràng buộc:** Tự động tổng hợp Clock Tree Synthesis (CTS), sửa lỗi timing setup/hold và khắc phục lỗi antenna thông qua diode insertion.
 
 ---
 
@@ -55,47 +47,56 @@ Quy trình thiết kế vật lý PnR được cấu hình thông qua [config.js
 Sau khi chạy hoàn chỉnh 80 bước của luồng tự động hóa vật lý từ tổng hợp logic đến kiểm định sản xuất, các số liệu thực tế thu được như sau:
 
 ### Diện Tích Silicon (Silicon Area):
-* **Tổng diện tích Die (Die Area):** **`842.209 µm²`** (Kích thước đường bao: $912.375\text{ µm} \times 923.095\text{ µm}$, tương đương $\approx 0.84\text{ mm²}$).
-* **Diện tích Core (Core Area):** **`811.314 µm²`**.
-* **Mật độ sử dụng cổng chuẩn thực tế (Standard Cell Utilization):** **`41.97%`**.
+* **Tổng diện tích Die (Die Area):** **`635,148 µm²`** (Kích thước đường bao: $791.62\text{ µm} \times 802.34\text{ µm}$, tương đương $\approx 0.635\text{ mm²}$).
+* **Diện tích Core (Core Area):** **`606,902 µm²`** (Kích thước đường bao: $785.68\text{ µm} \times 788.8\text{ µm}$).
+* **Mật độ sử dụng cổng chuẩn thực tế (Standard Cell Utilization):** **`55.22%`** (Bao gồm diện tích logic và các buffer timing/antennas chèn thêm).
 
 ### Thống Kê Linh Kiện (Gate Count & Cells):
-* **Số lượng cổng logic chuẩn (Standard Cell Instances):** **`41.874 cells`** (Không bao gồm các ô điền đầy fill cells).
-* **Thanh ghi đồng bộ (Sequential Flip-Flops):** **`2.323 FFs`** (Phục vụ cho các khối FSM điều khiển và đệm dữ liệu vòng lặp).
-* **Cổng đệm sửa lỗi Timing (Hold/Setup Buffers):** Tự động chèn **`2.055 hold-buffers`** và **`7.939 timing-repair buffers`** để bảo toàn chất lượng tín hiệu.
+* **Số lượng cổng logic chuẩn (Standard Cell Instances):** **`38,885 cells`** (Không bao gồm các ô điền đầy fill cells và tap cells).
+* **Thanh ghi đồng bộ (Sequential Flip-Flops):** **`2,323 FFs`**.
+* **Cổng đệm sửa lỗi Timing (Hold/Setup Buffers):** Tự động chèn **`2,057 hold-buffers`** và **`7,817 timing-repair buffers`** để bảo toàn chất lượng tín hiệu.
+* **Tế bào chống lỗi Antenna (Antenna Cells & Diodes):** Chèn **`215 antenna cells`** (chứa **`100`** đi-ốt bảo vệ).
 
-### Điện Năng Tiêu Thụ (Power Consumption):
-* **Công suất chuyển mạch động (Switching Power):** **`79.62 mW`** ($58.1\%$).
-* **Công suất nội tại cổng (Internal Power):** **`57.35 mW`** ($41.9\%$).
-* **Công suất dòng rò tĩnh (Leakage Power):** **`0.81 µW`** ($<0.01\%$).
-* **Tổng công suất tiêu thụ ước tính (Total Power):** **`136.97 mW`**.
+### Điện Năng Tiêu Thụ (Power Consumption - nom_tt_025C_1v80):
+* **Công suất chuyển mạch động (Switching Power):** **`78.34 mW`** ($57.9\%$).
+* **Công suất nội tại cổng (Internal Power):** **`56.95 mW`** ($42.1\%$).
+* **Công suất dòng rò tĩnh (Leakage Power):** **`0.61 µW`** ($<0.01\%$).
+* **Tổng công suất tiêu thụ ước tính (Total Power):** **`135.29 mW`**.
 
-### Thời Gian Đáp Ứng (Timing Slack):
-* **Setup Slack:** **`7.546 ns`** (Dương hoàn toàn, đạt chỉ tiêu timing setup).
-* **Hold Slack:** **`0.318 ns`** (Dương hoàn toàn, đạt chỉ tiêu timing hold).
-* **Worst Negative Slack (WNS):** **`0.00 ns`** (Không có bất kỳ đường trễ âm nào trên toàn bộ chip).
+### Thời Gian Đáp Ứng (Timing Slack - typical corner nom_tt_025C_1v80):
+* **Setup Slack:** **`7.219 ns`** (Dương hoàn toàn, đạt chỉ tiêu timing setup).
+* **Hold Slack:** **`0.334 ns`** (Dương hoàn toàn, đạt chỉ tiêu timing hold).
+* **Worst Negative Slack (WNS) / Total Negative Slack (TNS):** **`0.00 ns`** (Không có bất kỳ đường trễ âm nào trên toàn bộ chip ở góc làm việc điển hình).
 
 ### Kiểm Định Vật Lý Sản Xuất (Signoff Verification):
-* **Antenna Rule Check:** **`ĐẠT (Passed ✅)`** — Bảo vệ tốt oxide cổng của các transistor chống lại dòng điện tĩnh trong quá trình ăn mòn kim loại sản xuất.
+* **Antenna Rule Check:** **`ĐẠT (Passed ✅)`** — Bảo vệ tốt oxide cổng của các transistor chống lại dòng điện tĩnh trong quá trình chế tạo.
 * **LVS (Layout vs Schematic):** **`ĐẠT (Passed ✅)`** — Đảm bảo cấu trúc vật lý sau PnR hoàn toàn trùng khớp với thiết kế nguyên lý.
-* **DRC (Design Rule Checks):** **`ĐẠT (Passed ✅)`** — Đạt chuẩn tuyệt đối mọi khoảng cách hình học, kim loại, lỗ via theo quy tắc của SkyWater Foundry.
+* **DRC (Design Rule Checks):** **`ĐẠT (Passed ✅)`** — Đạt chuẩn tuyệt đối mọi quy tắc khoảng cách hình học của nhà máy SkyWater.
 
 ---
 
 ## 5. Cấu Trúc Các Tệp Tin Đầu Ra Vật Lý (Output Directory Structure)
 
-Toàn bộ các file kết quả thiết kế vật lý lớp cuối cùng (Views) được lưu trữ tại thư mục: **`my_designs/aes256/runs/RUN_2026-07-07_07-22-59/final/`**
+Toàn bộ các file kết quả thiết kế vật lý lớp cuối cùng (Views) và báo cáo (Reports) được tổ chức tại thư mục gốc của thiết kế:
 
 ```
-final/
-├── gds/              # Chứa tệp layout aes_core_256.gds định dạng GDSII (dùng để gửi nhà máy làm mặt nạ hàn chip)
-├── vh/               # Netlist cổng logic (Gate-level Netlist) dạng Verilog sau PnR
-├── sdf/              # Tệp Standard Delay Format chứa toàn bộ trễ của cổng và dây dẫn (phục vụ mô phỏng Timing)
-├── spef/             # Tệp ký sinh điện trở, điện dung dây dẫn (Standard Parasitic Extraction Format)
-├── spice/            # Netlist SPICE đầy đủ các chân nguồn (dùng để kiểm tra LVS)
-├── sdc/              # Bản sao file ràng buộc timing đầu ra
-├── def/              # File mô tả vị trí cell và đường đi dây (Design Exchange Format)
-├── lef/              # File thư viện hình học của IP Core (Library Exchange Format)
-├── metrics.json      # Báo cáo chi tiết mọi chỉ số diện tích, công suất, timing của thiết kế dạng JSON
-└── metrics.csv       # Báo cáo chi tiết dạng CSV
+my_designs/aes256/
+├── final/              # Chứa tệp layout và netlist vật lý cuối cùng
+│   ├── gds/            # Layout GDSII cuối cùng (để gửi nhà máy làm mặt nạ hàn chip)
+│   ├── vh/             # Netlist cổng logic (Gate-level Netlist) sau PnR
+│   ├── sdf/            # Ràng buộc trễ Standard Delay Format phục vụ mô phỏng timing
+│   ├── spef/           # Ký sinh điện trở, điện dung dây dẫn (Standard Parasitic Extraction)
+│   ├── spice/          # Netlist SPICE đầy đủ các chân nguồn (kiểm tra LVS)
+│   ├── sdc/            # Bản sao file ràng buộc timing đầu ra
+│   ├── def/            # File mô tả vị trí cell và đường đi dây (Design Exchange Format)
+│   ├── lef/            # File thư viện hình học của IP Core (Library Exchange Format)
+│   ├── metrics.json    # Báo cáo chi tiết mọi chỉ số diện tích, công suất, timing của thiết kế dạng JSON
+│   └── metrics.csv     # Báo cáo chi tiết dạng CSV
+├── output/             # Thư mục chứa các báo cáo đo đạc chi tiết (Reports)
+│   ├── timing_summary.rpt  # Báo cáo tổng hợp timing (Setup/Hold slack từng corner)
+│   ├── power.rpt           # Báo cáo chi tiết công suất tiêu thụ điện tĩnh và động
+│   ├── irdrop.rpt          # Báo cáo sụt giảm điện áp nguồn (IR Drop)
+│   ├── drc.magic.rpt       # Báo cáo kiểm định thiết kế hình học (DRC) từ Magic
+│   ├── lvs.netgen.rpt      # Báo cáo so khớp Layout vs Schematic từ Netgen
+│   └── manufacturability.rpt # Báo cáo tổng hợp khả năng chế tạo (Antenna, DRC, LVS)
 ```

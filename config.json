@@ -5,5 +5,6 @@
     ],
     "CLOCK_PERIOD": 25.0,
     "CLOCK_PORT": "clk",
-    "FP_CORE_UTIL": 30
+    "FP_CORE_UTIL": 40,
+    "GRT_ALLOW_CONGESTION": true
 }
