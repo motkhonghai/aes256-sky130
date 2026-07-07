@@ -1,0 +1,9 @@
+{
+    "DESIGN_NAME": "aes_core_256",
+    "VERILOG_FILES": [
+        "dir::src/aes256.v"
+    ],
+    "CLOCK_PERIOD": 25.0,
+    "CLOCK_PORT": "clk",
+    "FP_CORE_UTIL": 30
+}
